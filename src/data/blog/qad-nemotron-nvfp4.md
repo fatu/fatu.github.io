@@ -358,7 +358,7 @@ delayed scaling (tracking amax over a sliding window of recent steps).
 quantization choice: FP8, not NVFP4. This is a deliberate "2× now, safely" decision — FP8 roughly
 halves the cache footprint versus BF16 with far less accuracy risk than pushing the cache itself to
 4 bits. Going to 4-bit KV (as LLM-QAT does, for a 4× reduction) is left on the table as future work;
-see §6.
+see §7.
 
 **Teacher: BF16, frozen, in eval mode.** The teacher is the unquantized pretrained Nemotron-3-Nano.
 It is never updated during distillation, which means the distillation loss (KL divergence between
@@ -380,7 +380,7 @@ them at the model's higher-precision compute path:
 Everything else — all MoE expert FFNs (**including the routers**, which the config leaves quantized),
 all remaining Mamba SSM projections — runs at NVFP4 weights with FP8 activations. The router choice is
 worth flagging: a common instinct is that 128-expert top-6 routing is too sensitive to quantize, but
-the shipped recipe quantizes it anyway. Whether that's safe is a natural ablation (see §6).
+the shipped recipe quantizes it anyway. Whether that's safe is a natural ablation (see §7).
 
 **Loss: KL(teacher ‖ student) with temperature.** The student minimizes
 `KL(p_teacher ‖ p_student)` on the logit distribution, with a temperature parameter T that
@@ -394,23 +394,100 @@ difference at step zero between teacher and student is the quantization noise.
 
 ---
 
-## 6. What's Still Open
+## 6. Training in FP4: The Harder Half of the Pipeline
 
-This recipe quantizes a model for *inference*. The interesting frontier is everything it leaves on the
-table.
+Everything so far quantizes a *finished* model. PTQ, QAT, QAD all take a network trained in high
+precision and compress it for inference; the backward pass never enters the picture. The real
+frontier is training *in* FP4 — running the gradient computation itself through 4-bit GEMMs. That is
+a different, harder problem, and 2025–2026 produced the first results that make it real.
 
-**From inference to training: FP4 gradients.** This work quantizes a pretrained model's weights and
-activations. It does not touch the backward pass — gradients, and the master weights they update, stay
-high precision. The natural extension is *training* in NVFP4, and it's no longer hypothetical: NVIDIA
-recently pretrained a 12B hybrid Mamba-Transformer on 10T tokens entirely in NVFP4, matching the FP8
-baseline to within ~1%. The lesson from that line of work is that the forward pass is the easy part —
-quantizing the **weight gradient** is what destabilizes training, because a structured error there
-steers the optimizer itself off course. The fixes are specific: a Hadamard rotation on the weight-
-gradient inputs to disperse outliers, and stochastic rounding applied *only* to gradient tensors. (A
-subtlety worth its own post: MXFP4 results report that *deterministic* Hadamard works where *random*
-fails, while the NVFP4 training work uses random Hadamard successfully — the difference comes down to
-how much per-block precision the scale format buys you, E4M3 vs power-of-two E8M0.) Extending QAD on
-this hybrid architecture from inference to gradient quantization is the most direct next step.
+### The scaling spine: FP32 → FP16 → FP8 → FP4
+
+Low-precision training has climbed a ladder for a decade, and every rung has the same shape: quantize
+the bulk matmul, protect the accumulation.
+
+- **Mixed precision (FP16).** Micikevicius et al. (2018) ran the forward and backward GEMMs in FP16
+  but kept an FP32 *master copy* of the weights, accumulated in FP32, and used loss scaling to keep
+  small gradients from flushing to zero. One global scale for the whole network.
+- **FP8.** The Hopper generation moved the GEMMs to 8-bit with a *per-tensor* scale tracked over a
+  sliding window of recent amax values (delayed scaling, §3). Finer adaptation, same invariant: FP8
+  operands, FP32 accumulator.
+- **FP4.** The microscaling formats (§3) push to a *per-block* scale — 16 or 32 elements share one
+  scale — which is what makes 4-bit operands viable at all.
+
+The invariant never changes: master weights, accumulator, and optimizer state stay in FP32. What
+drops is the precision of the operands feeding the matmul.
+
+### Why the backward pass is where it breaks
+
+A training step has three matmuls, not one: the forward pass (**Fprop**), the activation gradient
+(**Dgrad**), and the weight gradient (**Wgrad**). Under FP4 they are not equal. Quantizing Fprop and
+Dgrad costs only a modest amount — on the order of ~10% more tokens to reach the same loss,
+recoverable just by training a little longer. Quantizing **Wgrad** is what *destabilizes* training:
+in Cim et al.'s staged MXFP4 ablation, adding Wgrad jumps the token overhead from ~10% to ~26% and
+the loss curve begins to diverge.
+
+The reason is structural. The weight gradient is a sum over the batch-and-sequence dimension — every
+token contributes to it — so a *structured* quantization error in Wgrad writes directly into the
+parameter-update direction, where it steers the optimizer itself off course. An error in Fprop or
+Dgrad only perturbs a single forward or backward signal; an error in Wgrad biases *where the model
+moves next*. That is why the backward weight-gradient path, not the forward pass, is where 4-bit
+training actually breaks.
+
+### The fix, and a contradiction worth understanding
+
+The fixes are specific, and they are applied surgically — each tool to the one tensor whose failure
+mode it addresses:
+
+- **Hadamard rotation** on the Wgrad inputs. A Hadamard transform is an orthogonal rotation; rotate
+  both GEMM operands and, because it is its own inverse (`H Hᵀ = I`), the rotations cancel in the
+  product and the math is unchanged — but the *quantization* now happens on rotated operands, where
+  concentrated outliers have been smeared into a more Gaussian, more block-scale-friendly distribution.
+- **Stochastic rounding** on the gradient tensors only. SR makes rounding unbiased, which matters most
+  where bias does the most damage — the gradients. Applied to weights or activations it *adds*
+  variance and diverges.
+- **2D block scaling** on the weights, so the forward and backward passes quantize each weight
+  *identically*. If they don't, backprop computes the gradient of a slightly different function than
+  the forward pass evaluated — a chain-rule violation.
+
+Here the two leading results appear to contradict each other, and the contradiction is the most
+instructive part. Cim et al. (2026), training MXFP4 on AMD MI355X, found that **deterministic**
+Hadamard rotations restore stability while **random** Hadamard *and* stochastic rounding both fail.
+NVIDIA (2025), pretraining a 12B hybrid Mamba-Transformer on 10T tokens in NVFP4, used **random**
+Hadamard and stochastic rounding and *succeeded*, matching the FP8 baseline.
+
+The resolution isn't that one of them is wrong. It is **selectivity plus format headroom.** Both
+papers agree that applying these tricks blindly to the whole pipeline fails — NVIDIA's own ablation
+shows SR on weights and activations diverging, exactly Cim's warning. NVIDIA wins by applying each
+tool only to the tensor that needs it (SR → gradients, Hadamard → Wgrad), on a *finer* format:
+NVFP4's block-16 with an E4M3 scale carries more precision per block than MXFP4's block-32 with a
+power-of-two E8M0 scale, and that extra headroom is enough to absorb the variance random methods
+inject. On Cim's coarser format there was no headroom to spare, so the structure had to come from a
+*deterministic* transform instead. The right question was never "random or deterministic Hadamard" —
+it is "which tensor, which format."
+
+### Precision can vary across time, not just across layers
+
+One more idea from the NVFP4 pretraining run is worth carrying back. The 4-bit loss tracked FP8 to
+within ~1% for most of training, then the gap widened to ~1.5% during the learning-rate *decay*
+phase. Switching just that phase back up to BF16/MXFP8 — at 8.2T of 10T tokens — closed it to ~0.5%
+for about 6% overhead. Precision isn't an all-or-nothing choice made once: the sensitive window can
+be a *phase of training*, not just a *set of layers*. The case study's sensitivity map (§5b) protects
+layers; this protects a moment in time. Same instinct, different axis.
+
+The throughline back to this post: the NVFP4 pretraining result is on the *same architecture family*
+as the case-study model — a hybrid Mamba-Transformer — using the *same format* this recipe deploys
+for inference. Inference quantization and training quantization are converging on the same model.
+Extending the case-study recipe from FP4 inference to FP4 gradients — quantizing the backward pass,
+paying the price of admission in Hadamard-rotated, stochastically-rounded gradients — is the most
+direct next step there is.
+
+---
+
+## 7. What's Still Open
+
+Training in FP4 (§6) is the largest open frontier. The inference recipe itself leaves several smaller
+threads open too.
 
 **4-bit KV cache.** The current recipe quantizes the KV cache to FP8 — a safe 2× reduction. LLM-QAT
 shows 4-bit KV is viable for a 4× reduction (24 GB → 6 GB at 32k sequence length on a 30B *dense*
@@ -452,7 +529,7 @@ independently of NVFP4 — whether the two compose without compounding accuracy 
 
 ---
 
-## 7. References
+## 8. References
 
 **Formats**
 
@@ -474,7 +551,7 @@ independently of NVFP4 — whether the two compose without compounding accuracy 
 - Cim et al. (2026). *Pretraining Large Language Models with MXFP4 on Native FP4 Hardware* (full-pipeline MXFP4 training on AMD MI355X). [arXiv:2605.09825](https://arxiv.org/abs/2605.09825)
 - NVIDIA (2025). *Pretraining Large Language Models with NVFP4.* [arXiv:2509.25149](https://arxiv.org/abs/2509.25149)
 
-**KV cache quantization (§6 frontier)**
+**KV cache quantization (§7 frontier)**
 
 - Zandieh, Daliri, Hadian, Mirrokni (2025). *Online Vector Quantization with Near-Optimal Distortion Rate* (TurboQuant). [arXiv:2504.19874](https://arxiv.org/abs/2504.19874)
 
