@@ -8,7 +8,7 @@ tags:
   - llm
   - numerics
   - blackwell
-draft: true
+draft: false
 ---
 
 ## 1. TL;DR
