@@ -8,7 +8,7 @@ tags:
   - benchmarks
   - evaluation
   - self-evolving
-draft: true
+draft: false
 ---
 
 I evaluated five agent memory systems and a full context baseline across three long term memory benchmarks, then tested eight memory configurations on task streams where memory is supposed to improve with experience. The study used two backbones (an open 27B model and Claude Sonnet 5), one judge, one retrieval budget, and complete token accounting. Five key findings emerged.
@@ -34,8 +34,6 @@ This post asks two questions using one harness. Part A (§4) asks: which memory 
 I did not build a new memory system. The study uses existing systems, public benchmarks, and controls.
 
 ## 2. What "self-evolving" actually means
-
-*(drafted 2026-09-16, step 4 — four parts)*
 
 ### 2.1 Prompt-driven memory consolidation
 
