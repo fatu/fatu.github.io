@@ -23,6 +23,8 @@ I evaluated five agent memory systems and a full context baseline across three l
 
 **5. Self-evolving memory did not become more accurate with experience; the only improvement over a stream was efficiency.** When memory improved accuracy, the gain was static: it was already present from the first question, persisted when Dynamic Cheatsheet's final sheet was frozen from the start, and transferred just as well from a sheet written on a different subject. Accuracy curves remain flat for every system on both backbones, while retrieving raw past attempts is most often best or tied for best. On a coding stream, however, ACE's reduction in turns became larger in the second half of the stream than in the first.
 
+*Code, adapters and run tables: [github.com/fatu/AgentMemory](https://github.com/fatu/AgentMemory).*
+
 ## 1. Why agents need memory
 
 An LLM agent's context window is its only native working memory at inference time. Once a task ends, the model does not carry that task-specific state forward on its own. Anything that makes an agent useful over weeks therefore has to be stored outside the model and brought back when needed: what the user said last month, which fix worked on the previous ticket, which approach failed. "Agent memory" is the name for that machinery.
@@ -44,10 +46,10 @@ generalized facts, strategies, workflows, and code.
 
 | Method | What is stored? | How is memory consolidated? |
 |---|---|---|
-| **Dynamic Cheatsheet (DC-CU)** | A cheatsheet containing heuristics, formulas, solution sketches, and reusable code; primarily semantic and procedural knowledge | A curator rewrites the cheatsheet using the existing memory and the latest generated solution, potentially merging, revising, or removing content |
+| **[Dynamic Cheatsheet](https://arxiv.org/abs/2504.07952) (DC-CU)** | A cheatsheet containing heuristics, formulas, solution sketches, and reusable code; primarily semantic and procedural knowledge | A curator rewrites the cheatsheet using the existing memory and the latest generated solution, potentially merging, revising, or removing content |
 | **Dynamic Cheatsheet (DC-RS)** | The cheatsheet plus historical query–generated-answer pairs; combines episodic records with distilled knowledge | Retrieves similar past examples and synthesizes an updated cheatsheet before answering the current query |
-| **ACE** | A structured playbook of domain knowledge, tool-use rules, procedures, code, and failure patterns, with unique IDs and helpful/harmful counters | A reflector extracts lessons, a curator proposes incremental additions, and programmatic merging and semantic deduplication maintain the playbook |
-| **ReasoningBank** | Task queries, original trajectories, and associated memory items structured as `{title, description, content}` | Distills strategies and pitfalls from self-judged successful and failed trajectories, then appends the resulting items without additional pruning in the basic implementation |
+| **[ACE](https://arxiv.org/abs/2510.04618)** | A structured playbook of domain knowledge, tool-use rules, procedures, code, and failure patterns, with unique IDs and helpful/harmful counters | A reflector extracts lessons, a curator proposes incremental additions, and programmatic merging and semantic deduplication maintain the playbook |
+| **[ReasoningBank](https://arxiv.org/abs/2509.25140)** | Task queries, original trajectories, and associated memory items structured as `{title, description, content}` | Distills strategies and pitfalls from self-judged successful and failed trajectories, then appends the resulting items without additional pruning in the basic implementation |
 
 ReasoningBank retains episodic traces in storage, but the agent primarily receives
 **distilled memory items** at inference time. Its implementation retrieves similar
@@ -93,15 +95,15 @@ A broader caution comes from [EvoAgentBench](https://arxiv.org/abs/2607.05202), 
 
 Across these approaches, two evaluation questions remain difficult to separate.
 
-The first is **memory consolidation versus simple storage**: does the agent transform experience into reusable knowledge, or does it improve simply because it can retrieve more of its history? EvoMemBench’s Finding 6 identifies the formation of reusable knowledge as a key bottleneck.
+The first is **memory consolidation versus simple storage**: does the agent transform experience into reusable knowledge, or does it improve simply because it can retrieve more of its history? [EvoMemBench](https://arxiv.org/abs/2605.18421)’s Finding 6 identifies the formation of reusable knowledge as a key bottleneck.
 
-The second is **similarity-driven reuse versus generalizable learning**: do gains extend to genuinely different tasks, or mainly to new tasks that resemble previous ones? Dynamic Cheatsheet §4.6 shows benefits from recurring task structure and example ordering, while Evo-Memory’s RQ2 reports a strong correlation between memory gains and within-dataset task similarity.
+The second is **similarity-driven reuse versus generalizable learning**: do gains extend to genuinely different tasks, or mainly to new tasks that resemble previous ones? [Dynamic Cheatsheet §4.6](https://arxiv.org/html/2504.07952#S4.SS6) shows benefits from recurring task structure and example ordering, while [Evo-Memory](https://arxiv.org/abs/2511.20857)’s RQ2 reports a strong correlation between memory gains and within-dataset task similarity.
 
 Part B is built around these two questions. For the first, ExpRAG serves as the matched baseline: it stores and retrieves past attempts without transforming them, under the same context budget. For the second, two controls test whether gains depend on similarity to earlier tasks: Dynamic Cheatsheet's final sheet frozen from the start, and a sheet written on a different subject.
 
 ## 3. How memory is benchmarked
 
-Three public benchmarks are commonly used to test whether an agent can remember over long horizons: LoCoMo (long two-person conversations), LongMemEval-S (500 questions, each with roughly 115K tokens of user–assistant history), and BEAM (synthetic conversations from 100K to 10M tokens, scored on 10 memory abilities). Although all three test long-term memory, they differ substantially in how performance is scored—and that distinction is essential before interpreting any leaderboard.
+Three public benchmarks are commonly used to test whether an agent can remember over long horizons: [LoCoMo](https://arxiv.org/abs/2402.17753) (long two-person conversations), [LongMemEval-S](https://arxiv.org/abs/2410.10813) (500 questions, each with roughly 115K tokens of user–assistant history), and [BEAM](https://arxiv.org/abs/2510.27246) (synthetic conversations from 100K to 10M tokens, scored on 10 memory abilities). Although all three test long-term memory, they differ substantially in how performance is scored—and that distinction is essential before interpreting any leaderboard.
 
 **The same answers can produce very different scores.** LoCoMo ships with an official scorer: token-level F1 for most categories and a substring-based test for the adversarial category. Mem0’s published 92.5, however, comes from a different evaluation setup—an LLM judge using a relatively permissive rubric, where one correct item can be sufficient and dates may differ by up to 14 days.
 
@@ -130,7 +132,7 @@ I recorded these four predictions, after the one-conversation pilots and before 
 
 ### 4.1 How I ran it
 
-**Five systems, one answering prompt.** Full context puts the entire conversation history into the prompt; it is the standard long context baseline provided by each benchmark. BM25 is plain keyword search over conversation turns. Mem0 extracts facts from the history into a memory store, updating or deleting old ones as new information arrives. AMEM writes a note for each turn, tags it, and links it to related notes. Hindsight runs as a server that stores the history and retrieves relevant information on request. For every system except full context, retrieved memory is capped at 4,096 tokens and inserted into the benchmark's official answering prompt without otherwise changing it. The only thing that changes across systems is what the model gets to read.
+**Five systems, one answering prompt.** Full context puts the entire conversation history into the prompt; it is the standard long context baseline provided by each benchmark. BM25 is plain keyword search over conversation turns. [Mem0](https://arxiv.org/abs/2504.19413) extracts facts from the history into a memory store, updating or deleting old ones as new information arrives. [AMEM](https://arxiv.org/abs/2502.12110) writes a note for each turn, tags it, and links it to related notes. [Hindsight](https://github.com/vectorize-io/hindsight) runs as a server that stores the history and retrieves relevant information on request. For every system except full context, retrieved memory is capped at 4,096 tokens and inserted into the benchmark's official answering prompt without otherwise changing it. The only thing that changes across systems is what the model gets to read.
 
 **Two backbones.** An open 27B model (Qwen3.8-27B, served locally) and Claude Sonnet 5, both without extended thinking. The same model that answers also writes the memory; there is no stronger hidden model doing the extraction.
 
@@ -333,3 +335,33 @@ The limits: one annotator, 98 items, LoCoMo only. BEAM's graded judge and LongMe
 **What would a better judge look like?** The LLM judge beat the official scorer against human labels, but it won by being lenient: it accepts near-misses, and a judge that accepts near-misses will also accept a confident wrong answer on the right topic. I only tested it on real answers, not on answers written to fool it. A better judge would be checked both ways, on real answers and on deliberately wrong ones, would give partial credit on a scale that was itself validated, and would report how often it changes its mind on a re-run. None of the three benchmarks here ships a judge with those checks, so every memory result still carries a hidden choice of scorer.
 
 **Where does memory start to beat reading everything?** This study has two points: at 100K tokens full context wins, at 1M it loses. The crossover is somewhere in between, and it almost certainly moves with the model, the task and the scorer, so the answer is probably a rule rather than a number: read everything while it fits, fall back to memory when it does not. What that rule should look like for conversations, with today's models and real histories between those two lengths, is still an open question.
+
+## References
+
+**Benchmarks**
+
+- LoCoMo — Maharana et al., *Evaluating Very Long-Term Conversational Memory of LLM Agents*, ACL 2024. [arXiv:2402.17753](https://arxiv.org/abs/2402.17753) · official scorer: [snap-research/locomo](https://github.com/snap-research/locomo)
+- LongMemEval — Wu et al., *LongMemEval: Benchmarking Chat Assistants on Long-Term Interactive Memory*, ICLR 2025. [arXiv:2410.10813](https://arxiv.org/abs/2410.10813) · [xiaowu0162/LongMemEval](https://github.com/xiaowu0162/LongMemEval)
+- BEAM — Tavakoli et al., *Beyond a Million Tokens: Benchmarking and Enhancing Long-Term Memory in LLMs*, ICLR 2026. [arXiv:2510.27246](https://arxiv.org/abs/2510.27246) · [mohammadtavakoli78/BEAM](https://github.com/mohammadtavakoli78/BEAM)
+- Evo-Memory — *Benchmarking LLM Agent Test-time Learning with Self-Evolving Memory* (the stream protocol and ExpRAG). [arXiv:2511.20857](https://arxiv.org/abs/2511.20857)
+- EvoMemBench — *Benchmarking Agent Memory from a Self-Evolving Perspective*. [arXiv:2605.18421](https://arxiv.org/abs/2605.18421)
+- Task streams: MMLU-Pro, Wang et al. 2024, [arXiv:2406.01574](https://arxiv.org/abs/2406.01574) · GPQA, Rein et al. 2023, [arXiv:2311.12022](https://arxiv.org/abs/2311.12022) · AIME 2024 and 2025 (American Invitational Mathematics Examination)
+
+**Memory systems run in this study**
+
+- Mem0 — Chhikara et al., *Mem0: Building Production-Ready AI Agents with Scalable Long-Term Memory*. [arXiv:2504.19413](https://arxiv.org/abs/2504.19413) · [mem0ai/mem0](https://github.com/mem0ai/mem0) · the LoCoMo judge rubric is taken verbatim from [mem0ai/memory-benchmarks](https://github.com/mem0ai/memory-benchmarks)
+- AMEM — Xu et al., *A-MEM: Agentic Memory for LLM Agents*. [arXiv:2502.12110](https://arxiv.org/abs/2502.12110) · [WujiangXu/AgenticMemory](https://github.com/WujiangXu/AgenticMemory)
+- Hindsight — [vectorize-io/hindsight](https://github.com/vectorize-io/hindsight), run as its embedded server in recall mode
+- Dynamic Cheatsheet — Suzgun et al., *Dynamic Cheatsheet: Test-Time Learning with Adaptive Memory*. [arXiv:2504.07952](https://arxiv.org/abs/2504.07952)
+- ACE — Zhang et al., *Agentic Context Engineering: Evolving Contexts for Self-Improving Language Models*. [arXiv:2510.04618](https://arxiv.org/abs/2510.04618)
+- ExpRAG and the no-memory baseline — my implementations of the Evo-Memory protocol; code below
+
+**Methods discussed in §2**
+
+- ReasoningBank — Ouyang et al., [arXiv:2509.25140](https://arxiv.org/abs/2509.25140) · Memory-R1, [arXiv:2508.19828](https://arxiv.org/abs/2508.19828) · MemAct, [arXiv:2510.12635](https://arxiv.org/abs/2510.12635) · Mem-α, [arXiv:2509.25911](https://arxiv.org/abs/2509.25911) · MemSearcher, [arXiv:2511.02805](https://arxiv.org/abs/2511.02805) · MemEvolve, [arXiv:2512.18746](https://arxiv.org/abs/2512.18746) · EvoAgentBench, [arXiv:2607.05202](https://arxiv.org/abs/2607.05202) · Memento, [arXiv:2508.16153](https://arxiv.org/abs/2508.16153) · GEPA, [arXiv:2507.19457](https://arxiv.org/abs/2507.19457)
+- Zhao et al., *Large Language Model Agents Are Not Always Faithful Self-Evolvers*, ICML 2026. [arXiv:2601.22436](https://arxiv.org/abs/2601.22436)
+
+**Models, tools and code**
+
+- Backbones: Qwen3.8-27B (open weights, served locally with vLLM) and Claude Sonnet 5 (also the judge). The coding stream ran [Claude Code](https://docs.claude.com/en/docs/claude-code/overview) as the agent.
+- All harness code, adapters, figure scripts and the run tables: [github.com/fatu/AgentMemory](https://github.com/fatu/AgentMemory)
