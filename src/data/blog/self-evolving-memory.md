@@ -23,8 +23,6 @@ I evaluated five agent memory systems and a full context baseline across three l
 
 **5. Self-evolving memory did not become more accurate with experience; the only improvement over a stream was efficiency.** When memory improved accuracy, the gain was static: it was already present from the first question, persisted when Dynamic Cheatsheet's final sheet was frozen from the start, and transferred just as well from a sheet written on a different subject. Accuracy curves remain flat for every system on both backbones, while retrieving raw past attempts is most often best or tied for best. On a coding stream, however, ACE's reduction in turns became larger in the second half of the stream than in the first.
 
-*Code, adapters and run tables: [github.com/fatu/AgentMemory](https://github.com/fatu/AgentMemory).*
-
 ## 1. Why agents need memory
 
 An LLM agent's context window is its only native working memory at inference time. Once a task ends, the model does not carry that task-specific state forward on its own. Anything that makes an agent useful over weeks therefore has to be stored outside the model and brought back when needed: what the user said last month, which fix worked on the previous ticket, which approach failed. "Agent memory" is the name for that machinery.
