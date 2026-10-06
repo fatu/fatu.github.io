@@ -338,8 +338,6 @@ The limits: one annotator, 98 items, LoCoMo only. BEAM's graded judge and LongMe
 
 ## References
 
-**Benchmarks**
-
 - LoCoMo — Maharana et al., *Evaluating Very Long-Term Conversational Memory of LLM Agents*, ACL 2024. [arXiv:2402.17753](https://arxiv.org/abs/2402.17753)
 - LongMemEval — Wu et al., *LongMemEval: Benchmarking Chat Assistants on Long-Term Interactive Memory*, ICLR 2025. [arXiv:2410.10813](https://arxiv.org/abs/2410.10813)
 - BEAM — Tavakoli et al., *Beyond a Million Tokens: Benchmarking and Enhancing Long-Term Memory in LLMs*, ICLR 2026. [arXiv:2510.27246](https://arxiv.org/abs/2510.27246)
@@ -347,14 +345,18 @@ The limits: one annotator, 98 items, LoCoMo only. BEAM's graded judge and LongMe
 - EvoMemBench — *Benchmarking Agent Memory from a Self-Evolving Perspective*. [arXiv:2605.18421](https://arxiv.org/abs/2605.18421)
 - Task streams: MMLU-Pro, Wang et al. 2024, [arXiv:2406.01574](https://arxiv.org/abs/2406.01574) · GPQA, Rein et al. 2023, [arXiv:2311.12022](https://arxiv.org/abs/2311.12022) · AIME 2024 and 2025 (American Invitational Mathematics Examination)
 
-**Memory systems**
-
 - Mem0 — Chhikara et al., *Mem0: Building Production-Ready AI Agents with Scalable Long-Term Memory*. [arXiv:2504.19413](https://arxiv.org/abs/2504.19413)
 - AMEM — Xu et al., *A-MEM: Agentic Memory for LLM Agents*. [arXiv:2502.12110](https://arxiv.org/abs/2502.12110)
 - Dynamic Cheatsheet — Suzgun et al., *Dynamic Cheatsheet: Test-Time Learning with Adaptive Memory*. [arXiv:2504.07952](https://arxiv.org/abs/2504.07952)
 - ACE — Zhang et al., *Agentic Context Engineering: Evolving Contexts for Self-Improving Language Models*. [arXiv:2510.04618](https://arxiv.org/abs/2510.04618)
 
-**Methods discussed in §2**
-
-- ReasoningBank — Ouyang et al., [arXiv:2509.25140](https://arxiv.org/abs/2509.25140) · Memory-R1, [arXiv:2508.19828](https://arxiv.org/abs/2508.19828) · MemAct, [arXiv:2510.12635](https://arxiv.org/abs/2510.12635) · Mem-α, [arXiv:2509.25911](https://arxiv.org/abs/2509.25911) · MemSearcher, [arXiv:2511.02805](https://arxiv.org/abs/2511.02805) · MemEvolve, [arXiv:2512.18746](https://arxiv.org/abs/2512.18746) · EvoAgentBench, [arXiv:2607.05202](https://arxiv.org/abs/2607.05202) · Memento, [arXiv:2508.16153](https://arxiv.org/abs/2508.16153) · GEPA, [arXiv:2507.19457](https://arxiv.org/abs/2507.19457)
+- ReasoningBank — Ouyang et al., *ReasoningBank: Scaling Agent Self-Evolving with Reasoning Memory*. [arXiv:2509.25140](https://arxiv.org/abs/2509.25140)
+- Memory-R1, [arXiv:2508.19828](https://arxiv.org/abs/2508.19828)
+- MemAct, [arXiv:2510.12635](https://arxiv.org/abs/2510.12635)
+- Mem-α, [arXiv:2509.25911](https://arxiv.org/abs/2509.25911)
+- MemSearcher, [arXiv:2511.02805](https://arxiv.org/abs/2511.02805)
+- MemEvolve, [arXiv:2512.18746](https://arxiv.org/abs/2512.18746)
+- EvoAgentBench, [arXiv:2607.05202](https://arxiv.org/abs/2607.05202)
+- Memento, [arXiv:2508.16153](https://arxiv.org/abs/2508.16153)
+- GEPA, [arXiv:2507.19457](https://arxiv.org/abs/2507.19457)
 - Zhao et al., *Large Language Model Agents Are Not Always Faithful Self-Evolvers*, ICML 2026. [arXiv:2601.22436](https://arxiv.org/abs/2601.22436)
