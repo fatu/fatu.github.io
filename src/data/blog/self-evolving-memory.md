@@ -340,28 +340,21 @@ The limits: one annotator, 98 items, LoCoMo only. BEAM's graded judge and LongMe
 
 **Benchmarks**
 
-- LoCoMo — Maharana et al., *Evaluating Very Long-Term Conversational Memory of LLM Agents*, ACL 2024. [arXiv:2402.17753](https://arxiv.org/abs/2402.17753) · official scorer: [snap-research/locomo](https://github.com/snap-research/locomo)
-- LongMemEval — Wu et al., *LongMemEval: Benchmarking Chat Assistants on Long-Term Interactive Memory*, ICLR 2025. [arXiv:2410.10813](https://arxiv.org/abs/2410.10813) · [xiaowu0162/LongMemEval](https://github.com/xiaowu0162/LongMemEval)
-- BEAM — Tavakoli et al., *Beyond a Million Tokens: Benchmarking and Enhancing Long-Term Memory in LLMs*, ICLR 2026. [arXiv:2510.27246](https://arxiv.org/abs/2510.27246) · [mohammadtavakoli78/BEAM](https://github.com/mohammadtavakoli78/BEAM)
+- LoCoMo — Maharana et al., *Evaluating Very Long-Term Conversational Memory of LLM Agents*, ACL 2024. [arXiv:2402.17753](https://arxiv.org/abs/2402.17753)
+- LongMemEval — Wu et al., *LongMemEval: Benchmarking Chat Assistants on Long-Term Interactive Memory*, ICLR 2025. [arXiv:2410.10813](https://arxiv.org/abs/2410.10813)
+- BEAM — Tavakoli et al., *Beyond a Million Tokens: Benchmarking and Enhancing Long-Term Memory in LLMs*, ICLR 2026. [arXiv:2510.27246](https://arxiv.org/abs/2510.27246)
 - Evo-Memory — *Benchmarking LLM Agent Test-time Learning with Self-Evolving Memory* (the stream protocol and ExpRAG). [arXiv:2511.20857](https://arxiv.org/abs/2511.20857)
 - EvoMemBench — *Benchmarking Agent Memory from a Self-Evolving Perspective*. [arXiv:2605.18421](https://arxiv.org/abs/2605.18421)
 - Task streams: MMLU-Pro, Wang et al. 2024, [arXiv:2406.01574](https://arxiv.org/abs/2406.01574) · GPQA, Rein et al. 2023, [arXiv:2311.12022](https://arxiv.org/abs/2311.12022) · AIME 2024 and 2025 (American Invitational Mathematics Examination)
 
-**Memory systems run in this study**
+**Memory systems**
 
-- Mem0 — Chhikara et al., *Mem0: Building Production-Ready AI Agents with Scalable Long-Term Memory*. [arXiv:2504.19413](https://arxiv.org/abs/2504.19413) · [mem0ai/mem0](https://github.com/mem0ai/mem0) · the LoCoMo judge rubric is taken verbatim from [mem0ai/memory-benchmarks](https://github.com/mem0ai/memory-benchmarks)
-- AMEM — Xu et al., *A-MEM: Agentic Memory for LLM Agents*. [arXiv:2502.12110](https://arxiv.org/abs/2502.12110) · [WujiangXu/AgenticMemory](https://github.com/WujiangXu/AgenticMemory)
-- Hindsight — [vectorize-io/hindsight](https://github.com/vectorize-io/hindsight), run as its embedded server in recall mode
+- Mem0 — Chhikara et al., *Mem0: Building Production-Ready AI Agents with Scalable Long-Term Memory*. [arXiv:2504.19413](https://arxiv.org/abs/2504.19413)
+- AMEM — Xu et al., *A-MEM: Agentic Memory for LLM Agents*. [arXiv:2502.12110](https://arxiv.org/abs/2502.12110)
 - Dynamic Cheatsheet — Suzgun et al., *Dynamic Cheatsheet: Test-Time Learning with Adaptive Memory*. [arXiv:2504.07952](https://arxiv.org/abs/2504.07952)
 - ACE — Zhang et al., *Agentic Context Engineering: Evolving Contexts for Self-Improving Language Models*. [arXiv:2510.04618](https://arxiv.org/abs/2510.04618)
-- ExpRAG and the no-memory baseline — my implementations of the Evo-Memory protocol; code below
 
 **Methods discussed in §2**
 
 - ReasoningBank — Ouyang et al., [arXiv:2509.25140](https://arxiv.org/abs/2509.25140) · Memory-R1, [arXiv:2508.19828](https://arxiv.org/abs/2508.19828) · MemAct, [arXiv:2510.12635](https://arxiv.org/abs/2510.12635) · Mem-α, [arXiv:2509.25911](https://arxiv.org/abs/2509.25911) · MemSearcher, [arXiv:2511.02805](https://arxiv.org/abs/2511.02805) · MemEvolve, [arXiv:2512.18746](https://arxiv.org/abs/2512.18746) · EvoAgentBench, [arXiv:2607.05202](https://arxiv.org/abs/2607.05202) · Memento, [arXiv:2508.16153](https://arxiv.org/abs/2508.16153) · GEPA, [arXiv:2507.19457](https://arxiv.org/abs/2507.19457)
 - Zhao et al., *Large Language Model Agents Are Not Always Faithful Self-Evolvers*, ICML 2026. [arXiv:2601.22436](https://arxiv.org/abs/2601.22436)
-
-**Models, tools and code**
-
-- Backbones: Qwen3.8-27B (open weights, served locally with vLLM) and Claude Sonnet 5 (also the judge). The coding stream ran [Claude Code](https://docs.claude.com/en/docs/claude-code/overview) as the agent.
-- All harness code, adapters, figure scripts and the run tables: [github.com/fatu/AgentMemory](https://github.com/fatu/AgentMemory)
